@@ -11,6 +11,7 @@ sys.path.append(
 from app.services.rsa_service import RsaService
 from app.services.aes_service import AesService
 
+
 BASE_URL = "http://127.0.0.1:8000"
 
 rsa_service = RsaService()
@@ -22,6 +23,7 @@ def get_rsa_public_key(rsa_id):
         f"{BASE_URL}/api/crypto-keys/rsa-public-key/{rsa_id}"
     )
     response.raise_for_status()
+
     return response.json()["public_key"]
 
 
@@ -68,34 +70,39 @@ def establish_secure_session(rsa_id):
 
 
 def send_message(session_id, aes_key):
-    print("\n=== Secure Message Exchange ===")
+    while True:
+        print("\n=== Secure Message Exchange ===")
 
-    message = input("Enter your message: ")
+        message = input("Enter your message (or 'exit' to quit): ")
 
-    encrypted_message = aes_service.encrypt(
-        aes_key,
-        message
-    )
+        if message.lower() == "exit":
+            print("\nClosing secure session...")
+            break
 
-    print("\nEncrypted message sent to server.")
+        encrypted_message = aes_service.encrypt(
+            aes_key,
+            message
+        )
 
-    response = requests.post(
-        f"{BASE_URL}/api/crypto-keys/session/{session_id}/message",
-        json={
-            "cipher_text": encrypted_message
-        }
-    )
-    response.raise_for_status()
+        print("\nEncrypted message sent to server.")
 
-    encrypted_response = response.json()["cipher_text"]
+        response = requests.post(
+            f"{BASE_URL}/api/crypto-keys/session/{session_id}/message",
+            json={
+                "cipher_text": encrypted_message
+            }
+        )
+        response.raise_for_status()
 
-    decrypted_response = aes_service.decrypt(
-        aes_key,
-        encrypted_response
-    )
+        encrypted_response = response.json()["cipher_text"]
 
-    print("\nServer response:")
-    print(decrypted_response)
+        decrypted_response = aes_service.decrypt(
+            aes_key,
+            encrypted_response
+        )
+
+        print("\nServer response:")
+        print(decrypted_response)
 
 
 def main():
@@ -110,6 +117,9 @@ def main():
 
     except requests.exceptions.RequestException as error:
         print("\nServer connection error:", error)
+
+    except ValueError as error:
+        print("\nInvalid input:", error)
 
     except Exception as error:
         print("\nError:", error)
